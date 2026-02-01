@@ -32,7 +32,7 @@ export default function PanelSwitcher() {
           color: '#ffffff',
           letterSpacing: '0.5px'
         }}>
-          OpenSCAD Playground
+          VenusCAD
         </h2>
       </div>
       
