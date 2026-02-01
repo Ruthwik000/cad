@@ -51,6 +51,59 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      // Get current code from editor
+      const currentCode = model?.source || '';
+      const hasExistingCode = currentCode.trim().length > 0;
+
+      // Build conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+
+      // Add current user message
+      conversationHistory.push({
+        role: 'user',
+        parts: [{ text: prompt }]
+      });
+
+      // Create system prompt based on whether we're editing or creating
+      const systemPrompt = hasExistingCode
+        ? `You are an expert OpenSCAD code editor. The user has existing OpenSCAD code and wants to modify it.
+
+CURRENT CODE:
+\`\`\`openscad
+${currentCode}
+\`\`\`
+
+CRITICAL RULES:
+1. Generate ONLY the complete modified OpenSCAD code - no explanations, no markdown formatting, no comments outside the code
+2. Keep all existing functionality unless specifically asked to change it
+3. Make the requested modifications while maintaining code quality
+4. Preserve variable names and module structure when possible
+5. Add realistic details and proper proportions for new elements
+6. Ensure the modified code will render without errors
+7. If adding new features, integrate them seamlessly with existing code
+
+User's modification request: ${prompt}
+
+Generate the complete modified OpenSCAD code now (just the code, nothing else):`
+        : `You are an expert OpenSCAD code generator. Your task is to generate highly realistic, detailed, and functional OpenSCAD code based on user requests.
+
+CRITICAL RULES:
+1. Generate ONLY valid OpenSCAD code - no explanations, no markdown formatting, no comments outside the code
+2. Make models as realistic and detailed as possible
+3. Use proper dimensions and proportions
+4. Include appropriate modules and functions for reusability
+5. Use transformations (translate, rotate, scale) effectively
+6. Add realistic details like rounded edges, proper curves, and fine features
+7. Use variables for easy customization
+8. Ensure the code is production-ready and will render without errors
+
+User request: ${prompt}
+
+Generate the OpenSCAD code now (just the code, nothing else):`;
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
         {
@@ -63,21 +116,7 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
               {
                 parts: [
                   {
-                    text: `You are an expert OpenSCAD code generator. Your task is to generate highly realistic, detailed, and functional OpenSCAD code based on user requests.
-
-CRITICAL RULES:
-1. Generate ONLY valid OpenSCAD code - no explanations, no markdown, no comments outside the code
-2. Make models as realistic and detailed as possible
-3. Use proper dimensions and proportions
-4. Include appropriate modules and functions for reusability
-5. Use transformations (translate, rotate, scale) effectively
-6. Add realistic details like rounded edges, proper curves, and fine features
-7. Use variables for easy customization
-8. Ensure the code is production-ready and will render without errors
-
-User request: ${prompt}
-
-Generate the OpenSCAD code now:`
+                    text: systemPrompt
                   }
                 ]
               }
@@ -161,7 +200,14 @@ Generate the OpenSCAD code now:`
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="pi pi-sparkles" style={{ fontSize: '1.2rem', color: 'var(--primary-color)' }}></i>
-          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>AI Assistant</h3>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>AI Assistant</h3>
+            {model?.source?.trim() && (
+              <small style={{ color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+                Edit mode - I can modify your current model
+              </small>
+            )}
+          </div>
         </div>
         <Button
           icon="pi pi-times"
@@ -222,10 +268,11 @@ Generate the OpenSCAD code now:`
           }}>
             <i className="pi pi-sparkles" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.3 }}></i>
             <p style={{ margin: 0, fontSize: '0.95rem' }}>
-              Ask me to generate any 3D model!
+              Ask me to generate or edit 3D models!
             </p>
             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>
-              Try: "Create a realistic car", "Generate a horse", "Make a wheel"
+              Create: "Make a realistic car"<br />
+              Edit: "Make the headlights round" or "Add a spare tire"
             </p>
           </div>
         )}
@@ -290,7 +337,7 @@ Generate the OpenSCAD code now:`
           <InputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe what you want to create..."
+            placeholder={model?.source?.trim() ? "Ask me to modify the current model..." : "Describe what you want to create..."}
             rows={2}
             style={{ flex: 1 }}
             disabled={loading}
