@@ -3,15 +3,7 @@ node_modules
 .github
 .vscode
 tests
-*.md
 *.log
 .env.local
 .env.development
 .DS_Store
-src
-webpack.config.js
-webpack.libs.config.js
-webpack-libs-plugin.js
-tsconfig.json
-jest.config.js
-jest-puppeteer.config.js

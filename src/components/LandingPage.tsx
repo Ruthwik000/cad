@@ -22,6 +22,27 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // Add responsive CSS for features grid
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+      @media (max-width: 768px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const examplePrompts = [
     "Create a simple cube with rounded edges",
     "Design a phone stand with 45 degree angle",
@@ -349,7 +370,7 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', marginBottom: '8rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
               <p style={{ color: '#666666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                 Try these examples:
               </p>
@@ -364,6 +385,242 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
                     {example}
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Features Section - Moved down with black transparent background */}
+          <div style={{ 
+            width: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(20px)',
+            padding: '6rem 2rem',
+            marginTop: '4rem'
+          }}>
+            <div style={{ 
+              maxWidth: '1400px', 
+              width: '100%', 
+              margin: '0 auto'
+            }}>
+              <h2 style={{
+                fontSize: '3.5rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                textAlign: 'center',
+                marginBottom: '1.5rem',
+                letterSpacing: '-0.02em'
+              }}>
+                Powerful Features
+              </h2>
+              <p style={{
+                fontSize: '1.3rem',
+                color: '#9ca3af',
+                textAlign: 'center',
+                marginBottom: '5rem'
+              }}>
+                Everything you need to bring your 3D ideas to life
+              </p>
+
+              <div className="features-grid">
+                {/* Feature 1: Image to 3D */}
+                <div style={{
+                  backgroundColor: 'rgba(20, 20, 20, 0.6)',
+                  border: '1px solid rgba(129, 140, 248, 0.2)',
+                  borderRadius: '20px',
+                  padding: '3rem',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'default',
+                  minHeight: '320px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(129, 140, 248, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '2rem'
+                  }}>
+                    <i className="pi pi-image" style={{ fontSize: '2.5rem', color: '#818cf8' }}></i>
+                  </div>
+                  <h3 style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    marginBottom: '1.2rem'
+                  }}>
+                    Image to 3D CAD Model
+                  </h3>
+                  <p style={{
+                    fontSize: '1.1rem',
+                    color: '#9ca3af',
+                    lineHeight: '1.8'
+                  }}>
+                    Transform 2D images, sketches, or screenshots into fully editable 3D models. Simply paste or upload an image and watch AI convert it to CAD.
+                  </p>
+                </div>
+
+                {/* Feature 2: Collaborative Building */}
+                <div style={{
+                  backgroundColor: 'rgba(20, 20, 20, 0.6)',
+                  border: '1px solid rgba(129, 140, 248, 0.2)',
+                  borderRadius: '20px',
+                  padding: '3rem',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'default',
+                  minHeight: '320px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(129, 140, 248, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '2rem'
+                  }}>
+                    <i className="pi pi-users" style={{ fontSize: '2.5rem', color: '#818cf8' }}></i>
+                  </div>
+                  <h3 style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    marginBottom: '1.2rem'
+                  }}>
+                    Collaborative Building
+                  </h3>
+                  <p style={{
+                    fontSize: '1.1rem',
+                    color: '#9ca3af',
+                    lineHeight: '1.8'
+                  }}>
+                    Share your projects with a link and work together in real-time. Multiple users can view, edit, and iterate on designs simultaneously.
+                  </p>
+                </div>
+
+                {/* Feature 3: Smart Parametric Tuning */}
+                <div style={{
+                  backgroundColor: 'rgba(20, 20, 20, 0.6)',
+                  border: '1px solid rgba(129, 140, 248, 0.2)',
+                  borderRadius: '20px',
+                  padding: '3rem',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'default',
+                  minHeight: '320px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(129, 140, 248, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '2rem'
+                  }}>
+                    <i className="pi pi-sliders-h" style={{ fontSize: '2.5rem', color: '#818cf8' }}></i>
+                  </div>
+                  <h3 style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    marginBottom: '1.2rem'
+                  }}>
+                    Smart Parametric Tuning
+                  </h3>
+                  <p style={{
+                    fontSize: '1.1rem',
+                    color: '#9ca3af',
+                    lineHeight: '1.8'
+                  }}>
+                    Adjust dimensions and parameters with intuitive sliders or natural language. Ask AI to resize, reshape, or modify any aspect of your model instantly.
+                  </p>
+                </div>
+
+                {/* Feature 4: Advanced Boolean Operations */}
+                <div style={{
+                  backgroundColor: 'rgba(20, 20, 20, 0.6)',
+                  border: '1px solid rgba(129, 140, 248, 0.2)',
+                  borderRadius: '20px',
+                  padding: '3rem',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'default',
+                  minHeight: '320px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(20, 20, 20, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(129, 140, 248, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '2rem'
+                  }}>
+                    <i className="pi pi-box" style={{ fontSize: '2.5rem', color: '#818cf8' }}></i>
+                  </div>
+                  <h3 style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    marginBottom: '1.2rem'
+                  }}>
+                    Advanced Boolean Operations
+                  </h3>
+                  <p style={{
+                    fontSize: '1.1rem',
+                    color: '#9ca3af',
+                    lineHeight: '1.8'
+                  }}>
+                    Create complex geometries with union, intersection, and difference operations. Merge shapes or carve intricate details with precision.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
