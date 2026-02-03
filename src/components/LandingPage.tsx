@@ -58,8 +58,8 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
 
   const handleNewChat = async () => {
     if (!user) {
-      // If not logged in, just navigate to editor
-      navigate('/editor');
+      // If not logged in, just navigate to root
+      navigate('/');
       return;
     }
 
@@ -72,11 +72,11 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
       await loadUserSessions();
       
       // Navigate to the new session
-      navigate(`/editor/${sessionId}`);
+      navigate(`/${sessionId}`);
     } catch (error) {
       console.error('Error creating new session:', error);
-      // Fallback to editor without session
-      navigate('/editor');
+      // Fallback to root
+      navigate('/');
     }
   };
 
@@ -96,17 +96,10 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
           sessionId = await createSession(user.uid, title);
           localStorage.setItem('currentSessionId', sessionId);
           
-          // Store the initial prompt to be processed by AI chat
+          // Store the initial prompt to be loaded into input box
           localStorage.setItem('initialPrompt', prompt);
           
-          // Update session with initial prompt
-          await updateSession(sessionId, {
-            messages: [{
-              role: 'user',
-              content: prompt,
-              timestamp: new Date() as any
-            }]
-          });
+          // Don't add message to Firestore yet - let the user send it from the chat
           
           // Reload sessions to show the new one
           await loadUserSessions();
@@ -155,7 +148,7 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
             />
           )}
           <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.5px' }}>
-            Venus
+            Venus-CAD
           </div>
         </div>
 

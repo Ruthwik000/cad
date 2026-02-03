@@ -44,19 +44,12 @@ export default function AIChatPanel({ visible, onClose, initialPrompt }: { visib
       setMessages([]);
       setCurrentSessionId(null);
     }
-
-    // Check for initial prompt from landing page
-    const initialPrompt = localStorage.getItem('initialPrompt');
-    if (initialPrompt && savedKey) {
-      // Clear the initial prompt from storage
-      localStorage.removeItem('initialPrompt');
-      // Process it after a short delay to ensure component is ready
-      setTimeout(() => {
-        generateOpenSCAD(initialPrompt);
-      }, 500);
-    } else if (initialPrompt && !savedKey) {
-      // If no API key, set the prompt in the input field
-      setInput(initialPrompt);
+    
+    // Check for initial prompt from landing page (for new sessions)
+    const initialPromptFromStorage = localStorage.getItem('initialPrompt');
+    if (initialPromptFromStorage) {
+      console.log('📝 Loading initial prompt into input box:', initialPromptFromStorage);
+      setInput(initialPromptFromStorage);
       localStorage.removeItem('initialPrompt');
     }
   }, []);
@@ -71,6 +64,34 @@ export default function AIChatPanel({ visible, onClose, initialPrompt }: { visib
           content: msg.content,
           image: msg.image
         }));
+        
+        // Check if the last message is from user and needs a response
+        const lastMessage = loadedMessages[loadedMessages.length - 1];
+        const hasInitialPrompt = localStorage.getItem('initialPrompt');
+        
+        // Check if this is a new session with initial prompt
+        const isNewSessionWithPrompt = loadedMessages.length === 1 && lastMessage.role === 'user' && hasInitialPrompt;
+        
+        if (isNewSessionWithPrompt) {
+          // Don't add the message to chat, put it in the input box instead
+          console.log('� Loading initial prompt into input box:l', lastMessage.content);
+          setInput(lastMessage.content);
+          setMessages([]); // Start with empty chat
+          localStorage.removeItem('initialPrompt');
+          
+          // Delete the message from Firestore since we're not using it yet
+          // The user will send it manually
+          if (currentSessionId) {
+            try {
+              await updateSession(currentSessionId, { messages: [] });
+            } catch (error) {
+              console.error('Error clearing initial message:', error);
+            }
+          }
+          return; // Exit early
+        }
+        
+        // Normal case - just load the messages
         setMessages(loadedMessages);
         
         // Load the model code if available
@@ -168,27 +189,35 @@ export default function AIChatPanel({ visible, onClose, initialPrompt }: { visib
     }
   };
 
-  const generateOpenSCAD = async (prompt: string, imageData?: string) => {
+  const generateOpenSCAD = async (prompt: string, imageData?: string, skipUserMessage: boolean = false) => {
     if (!apiKey) {
       setShowApiKeyInput(true);
       return;
     }
 
     setLoading(true);
-    const userMessage: Message = { role: 'user', content: prompt, image: imageData };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Only add user message if not skipping (i.e., not already in Firestore)
+    if (!skipUserMessage) {
+      const userMessage: Message = { role: 'user', content: prompt, image: imageData };
+      setMessages(prev => [...prev, userMessage]);
 
-    // Save user message to Firestore if user is logged in
-    if (user && currentSessionId) {
-      try {
-        await addMessageToSession(currentSessionId, {
-          role: 'user',
-          content: prompt,
-          image: imageData
-        });
-      } catch (error) {
-        console.error('Error saving user message:', error);
+      // Save user message to Firestore if user is logged in
+      if (user && currentSessionId) {
+        try {
+          await addMessageToSession(currentSessionId, {
+            role: 'user',
+            content: prompt,
+            image: imageData
+          });
+        } catch (error) {
+          console.error('Error saving user message:', error);
+        }
       }
+    } else {
+      // If skipping, we still need to show the user message in UI
+      const userMessage: Message = { role: 'user', content: prompt, image: imageData };
+      setMessages(prev => [...prev, userMessage]);
     }
 
     try {
@@ -262,35 +291,85 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
         });
       }
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: requestParts
-              }
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8192,
+      // Try Groq first (better rate limits), fallback to Gemini
+      const groqKey = process.env.REACT_APP_GROQ_API_KEY;
+      let generatedText = '';
+      
+      if (groqKey && !imageData) {
+        // Use Groq for text-only requests (no vision support)
+        try {
+          console.log('🚀 Using Groq API...');
+          const groqResponse = await fetch(
+            'https://api.groq.com/openai/v1/chat/completions',
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${groqKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  ...conversationHistory.slice(0, -1).map(msg => ({
+                    role: msg.role === 'user' ? 'user' : 'assistant',
+                    content: msg.parts[0].text
+                  })),
+                  { role: 'user', content: prompt }
+                ],
+                temperature: 0.7,
+                max_tokens: 8192,
+              })
             }
-          })
-        }
-      );
+          );
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+          if (groqResponse.ok) {
+            const groqData = await groqResponse.json();
+            generatedText = groqData.choices?.[0]?.message?.content || '';
+            console.log('✅ Groq API succeeded');
+          } else {
+            console.warn('⚠️ Groq API failed with status:', groqResponse.status);
+          }
+        } catch (error) {
+          console.warn('⚠️ Groq API error, falling back to Gemini:', error);
+        }
       }
 
-      const data = await response.json();
-      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+      // Fallback to Gemini if Groq failed or image is present
+      if (!generatedText) {
+        console.log('🔄 Using Gemini API...');
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: requestParts
+                }
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 8192,
+              }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Gemini API Error: ${response.status} - ${response.statusText}. ${errorText}. Try using a different API key or wait a few minutes if you hit rate limits.`);
+        }
+
+        const data = await response.json();
+        generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+        console.log('✅ Gemini API succeeded');
+      }
       
       // Extract code from markdown if present
       let code = generatedText;
@@ -641,6 +720,25 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
                 handleSubmit(e);
               }
             }}
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (items) {
+                for (let i = 0; i < items.length; i++) {
+                  if (items[i].type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    const blob = items[i].getAsFile();
+                    if (blob) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setSelectedImage(reader.result as string);
+                      };
+                      reader.readAsDataURL(blob);
+                    }
+                    break;
+                  }
+                }
+              }
+            }}
           />
           <Button
             icon="pi pi-send"
@@ -655,7 +753,7 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
           />
         </div>
         <small style={{ display: 'block', marginTop: '0.5rem', color: '#666666', fontSize: '0.8rem' }}>
-          Press Enter to send, Shift+Enter for new line
+          Press Enter to send, Shift+Enter for new line, Ctrl+V to paste images
         </small>
       </form>
     </div>

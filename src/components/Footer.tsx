@@ -1,7 +1,7 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import React, { CSSProperties, useContext, useRef } from 'react';
-import { ModelContext } from './contexts.ts';
+import { CSSProperties, useContext, useRef } from 'react';
+import { ModelContext, FSContext } from './contexts.ts';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { Button } from 'primereact/button';
 import { ProgressBar } from 'primereact/progressbar';
@@ -14,7 +14,9 @@ import MultimaterialColorsDialog from './MultimaterialColorsDialog.tsx';
 
 export default function Footer({style}: {style?: CSSProperties}) {
   const model = useContext(ModelContext);
+  const fs = useContext(FSContext);
   if (!model) throw new Error('No model');
+  if (!fs) throw new Error('No filesystem');
   const state = model.state;
   
   const toast = useRef<Toast>(null);
@@ -57,32 +59,80 @@ export default function Footer({style}: {style?: CSSProperties}) {
         onClick={() => {
           const input = document.createElement('input');
           input.type = 'file';
-          input.accept = '.stl,.obj,.off,.3mf,.glb,.gltf';
+          input.accept = '.scad,.stl,.obj,.off,.3mf,.glb,.gltf,.dxf,.svg';
           input.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) {
-              const reader = new FileReader();
-              reader.onload = async (event) => {
-                const content = event.target?.result;
-                if (content) {
-                  try {
-                    const path = `/${file.name}`;
-                    model.fs.writeFileSync(path, new Uint8Array(content as ArrayBuffer));
-                    model.openFile(path);
-                    toast.current?.show({severity: 'success', summary: 'Imported', detail: `${file.name} imported successfully`});
-                  } catch (error) {
-                    toast.current?.show({severity: 'error', summary: 'Import Failed', detail: `${error}`});
-                  }
+              try {
+                const path = `/${file.name}`;
+                const isTextFile = file.name.endsWith('.scad') || file.name.endsWith('.dxf') || file.name.endsWith('.svg');
+                
+                // Get BrowserFS Buffer
+                const Buffer = (window as any).BrowserFS.BFSRequire('buffer').Buffer;
+                
+                if (isTextFile) {
+                  // Handle text files (SCAD, DXF, SVG) - store content directly
+                  const text = await file.text();
+                  const buffer = Buffer.from(text, 'utf8');
+                  fs.writeFile(path, buffer);
+                  
+                  // Use openFile for text files (it will read and add to sources)
+                  model.openFile(path);
+                } else {
+                  // Handle binary files (STL, OBJ, OFF, 3MF, GLB, GLTF) - use blob URL
+                  const arrayBuffer = await file.arrayBuffer();
+                  const buffer = Buffer.from(arrayBuffer);
+                  fs.writeFile(path, buffer);
+                  
+                  // Create blob URL for binary files (don't store content in state)
+                  const blob = new Blob([arrayBuffer]);
+                  const blobUrl = URL.createObjectURL(blob);
+                  
+                  // Manually update state for binary files to avoid reading content
+                  model.mutate(s => {
+                    // Remove source of previous active path if it's unmodified
+                    const readSource = (p: string) => {
+                      try {
+                        return new TextDecoder("utf-8").decode(fs.readFileSync(p));
+                      } catch (e) {
+                        return '';
+                      }
+                    };
+                    const activePathContent = readSource(s.params.activePath);
+                    s.params.sources = s.params.sources.filter(src => src.path !== s.params.activePath || src.content != activePathContent);
+                    
+                    // Set new active path and add source with URL (not content)
+                    s.params.activePath = path;
+                    if (!s.params.sources.find(src => src.path === path)) {
+                      s.params.sources = [...s.params.sources, { path, url: blobUrl }];
+                    }
+                    
+                    // Reset render state
+                    s.lastCheckerRun = undefined;
+                    s.output = undefined;
+                    s.export = undefined;
+                    s.preview = undefined;
+                    s.currentRunLogs = undefined;
+                    s.error = undefined;
+                    s.is2D = undefined;
+                  });
+                  
+                  // Trigger render for binary files
+                  model.render({isPreview: true, now: false});
                 }
-              };
-              reader.readAsArrayBuffer(file);
+                
+                toast.current?.show({severity: 'success', summary: 'Imported', detail: `${file.name} imported successfully`});
+              } catch (error) {
+                console.error('Import error:', error);
+                toast.current?.show({severity: 'error', summary: 'Import Failed', detail: `${error}`});
+              }
             }
           };
           input.click();
         }}
         className="p-button-sm p-button-secondary"
         label="Import"
-        tooltip="Import 3D model (STL, OBJ, OFF, 3MF, GLB)"
+        tooltip="Import file (SCAD, STL, OBJ, OFF, 3MF, GLB, DXF, SVG)"
         tooltipOptions={{ position: 'top' }}
       />
 

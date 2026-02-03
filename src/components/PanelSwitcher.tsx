@@ -13,7 +13,6 @@ export default function PanelSwitcher() {
   const model = useContext(ModelContext);
   const navigate = useNavigate();
   const { user, logOut } = useAuth();
-  const [showChats, setShowChats] = useState(false);
   const toastRef = React.useRef<Toast>(null);
   
   if (!model) throw new Error('No model');
@@ -41,7 +40,7 @@ export default function PanelSwitcher() {
       });
     }
     
-    const shareUrl = `${window.location.origin}/editor/${sessionId}`;
+    const shareUrl = `${window.location.origin}/${sessionId}`;
     
     navigator.clipboard.writeText(shareUrl).then(() => {
       toastRef.current?.show({
@@ -150,20 +149,6 @@ export default function PanelSwitcher() {
           gap: '0.5rem',
           alignItems: 'center'
         }}>
-          {/* Chats Button */}
-          <Button
-            label="Chats"
-            icon="pi pi-comments"
-            onClick={() => setShowChats(!showChats)}
-            style={{
-              backgroundColor: showChats ? '#ffffff' : '#1a1a1a',
-              color: showChats ? '#000000' : '#ffffff',
-              border: '1px solid #333333',
-              padding: '0.5rem 1rem',
-              fontWeight: 500
-            }}
-          />
-          
           {/* Copy Link Button */}
           <Button
             icon="pi pi-link"

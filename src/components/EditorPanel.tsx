@@ -121,7 +121,25 @@ export default function EditorPanel({className, style}: {className?: string, sty
           {
             label: "Upload file(s)",
             icon: 'pi pi-upload',
-            disabled: true,
+            command: () => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.scad,.txt';
+              input.multiple = false;
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  try {
+                    const text = await file.text();
+                    model.setSource(text);
+                  } catch (error) {
+                    console.error('Error reading file:', error);
+                    alert('Failed to read file');
+                  }
+                }
+              };
+              input.click();
+            },
           },
           {
             label: 'Download sources',

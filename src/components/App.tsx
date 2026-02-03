@@ -184,22 +184,25 @@ function EditorWorkspace({model, state, leftWidth, setLeftWidth, rightChatWidth,
       {!wasmReady && (
         <div style={{
           position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           zIndex: 9999,
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-          padding: '2rem',
-          borderRadius: '12px',
-          border: '1px solid #333',
-          textAlign: 'center'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000'
         }}>
-          <div style={{ color: '#ffffff', fontSize: '1.2rem', marginBottom: '1rem' }}>
-            Initializing 3D Engine...
-          </div>
-          <div style={{ color: '#666', fontSize: '0.9rem' }}>
-            Loading OpenSCAD WASM module
-          </div>
+          <img 
+            src="/loading.gif" 
+            alt="Loading..." 
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain'
+            }}
+          />
         </div>
       )}
       

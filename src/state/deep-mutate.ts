@@ -16,6 +16,10 @@ export function bubbleUpDeepMutations<T extends KVObject>(o: T, mutate: (o: T) =
 }
 
 function collectObjectEntriesDeeply(o: KVObject, out: KVEntriesMap = new Map()): KVEntriesMap {
+  if (o == null || typeof o !== 'object') {
+    return out; // Skip null/undefined/primitive values
+  }
+  
   if (out.get(o)) {
     return out; // Graph cycle
   }
