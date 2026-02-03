@@ -5,7 +5,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import FlowFieldBackground from './FlowFieldBackground';
 import AuthDialog from './AuthDialog';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserSessions, Session, createSession, updateSession } from '../firebase/firestore';
+import { getUserSessions, Session, createSession } from '../firebase/firestore';
 import { ProgressSpinner } from 'primereact/progressspinner';
 
 interface LandingPageProps {
@@ -17,7 +17,6 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const { user, logOut } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
@@ -81,38 +80,39 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
   };
 
   const handleGenerate = async () => {
-    if (prompt.trim()) {
-      setIsGenerating(true);
-      
-      // Create a new session if user is logged in
-      let sessionId: string | undefined;
-      if (user) {
-        try {
-          // Generate a better title from the prompt
-          const title = prompt.length > 50 
-            ? prompt.substring(0, 50).trim() + '...' 
-            : prompt.trim();
-          
-          sessionId = await createSession(user.uid, title);
-          localStorage.setItem('currentSessionId', sessionId);
-          
-          // Store the initial prompt to be loaded into input box
-          localStorage.setItem('initialPrompt', prompt);
-          
-          // Don't add message to Firestore yet - let the user send it from the chat
-          
-          // Reload sessions to show the new one
-          await loadUserSessions();
-        } catch (error) {
-          console.error('Error creating session:', error);
-        }
-      } else {
-        // For non-logged in users, still store the prompt
-        localStorage.setItem('initialPrompt', prompt);
-      }
-      
-      onStartProject(prompt, sessionId);
+    if (!prompt.trim()) return;
+    
+    // Check if user is authenticated
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
     }
+    
+    setIsGenerating(true);
+    
+    // Create a new session if user is logged in
+    let sessionId: string | undefined;
+    try {
+      // Generate a better title from the prompt
+      const title = prompt.length > 50 
+        ? prompt.substring(0, 50).trim() + '...' 
+        : prompt.trim();
+      
+      sessionId = await createSession(user.uid, title);
+      localStorage.setItem('currentSessionId', sessionId);
+      
+      // Store the initial prompt to be loaded into input box
+      localStorage.setItem('initialPrompt', prompt);
+      
+      // Don't add message to Firestore yet - let the user send it from the chat
+      
+      // Reload sessions to show the new one
+      await loadUserSessions();
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+    
+    onStartProject(prompt, sessionId);
   };
 
   return (
@@ -167,10 +167,10 @@ export default function LandingPage({ onStartProject }: LandingPageProps) {
             </>
           ) : (
             <>
-              <Button label="Log in" text onClick={() => { setAuthMode('login'); setShowAuthDialog(true); }}
+              <Button label="Log in" text onClick={() => setShowAuthDialog(true)}
                 style={{ color: '#ffffff', fontSize: '0.95rem', fontWeight: 500, padding: '0.5rem 1.5rem',
                   backgroundColor: 'transparent', border: 'none' }} />
-              <Button label="Get started" onClick={() => { setAuthMode('signup'); setShowAuthDialog(true); }}
+              <Button label="Get started" onClick={() => setShowAuthDialog(true)}
                 style={{ color: '#000000', backgroundColor: '#ffffff', fontSize: '0.95rem', fontWeight: 600,
                   padding: '0.5rem 1.5rem', border: 'none', borderRadius: '8px' }} />
             </>
