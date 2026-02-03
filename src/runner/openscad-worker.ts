@@ -1,7 +1,6 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
 /// <reference lib="webworker" />
-import OpenSCAD from "../wasm/openscad.js";
 
 import { createEditorFS, symlinkLibraries } from "../fs/filesystem.ts";
 import { OpenSCADInvocation, OpenSCADInvocationCallback, OpenSCADInvocationResults } from "./openscad-runner.ts";
@@ -9,8 +8,10 @@ import { deployedArchiveNames } from "../fs/zip-archives.ts";
 import { fetchSource } from "../utils.ts";
 
 importScripts("browserfs.min.js");
+importScripts("openscad.js");
 
 declare const self: DedicatedWorkerGlobalScope;
+declare const OpenSCAD: any;
 
 export type MergedOutputs = {stdout?: string, stderr?: string, error?: string}[];
 

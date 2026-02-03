@@ -1,9 +1,13 @@
+# Don't upload these to Vercel
 node_modules
 .git
-.github
-.vscode
-tests
-*.log
-.env.local
-.env.development
+.env
 .DS_Store
+*.log
+.vscode
+.idea
+
+# These are generated during build
+dist
+libs
+src/wasm

@@ -175,6 +175,13 @@ const config = [
         {
           test: /\.wasm$/,
           type: 'asset/resource'
+        },
+        {
+          test: /openscad\.js$/,
+          type: 'asset/resource',
+          generator: {
+            filename: 'openscad.js'
+          }
         }
       ]
     },
@@ -188,7 +195,8 @@ const config = [
         fs: false,
         path: false,
         module: false
-      }
+      },
+      symlinks: false
     },
     externals: {
       'browserfs': 'BrowserFS'

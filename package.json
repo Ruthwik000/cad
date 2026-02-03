@@ -37,6 +37,7 @@
     "start": "npm run start:development",
     "build": "NODE_ENV=production webpack --mode=production",
     "vercel-build": "npm run build",
+    "verify": "node verify-build.js",
     "build:libs": "LIBS_BUILD_MODE=all webpack --config webpack.libs.config.js",
     "build:libs:clean": "LIBS_BUILD_MODE=clean webpack --config webpack.libs.config.js",
     "build:libs:wasm": "LIBS_BUILD_MODE=wasm webpack --config webpack.libs.config.js",
