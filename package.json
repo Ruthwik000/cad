@@ -16,6 +16,7 @@
     "chroma-js": "^3.1.2",
     "debug": "^4.4.0",
     "dotenv": "^17.2.3",
+    "firebase": "^12.8.0",
     "jszip": "^3.10.1",
     "monaco-editor": "^0.52.2",
     "primeflex": "^3.3.1",
@@ -23,6 +24,7 @@
     "primereact": "^10.8.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.13.0",
     "thumbhash": "^0.1.1",
     "uuid": "^11.0.3",
     "uzip": "^0.20201231.0"

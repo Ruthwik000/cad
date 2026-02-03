@@ -65,11 +65,13 @@ const config = [
     output: {
       filename: 'index.js',
       path: path.resolve(__dirname, 'dist'),
+      publicPath: '/',
     },
     devServer: {
       static: path.join(__dirname, 'dist'),
       compress: true,
       port: 4000,
+      historyApiFallback: true,
     },
     plugins: [
       new webpack.EnvironmentPlugin({

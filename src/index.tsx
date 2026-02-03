@@ -20,6 +20,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.min.css";
 import { PrimeReactProvider } from 'primereact/api';
+import { AuthProvider } from './contexts/AuthContext';
 
 const log = debug('app:log');
 
@@ -101,7 +102,9 @@ window.addEventListener('load', async () => {
         ripple: false,
         hideOverlaysOnDocumentScrolling: false
       }}>
-        <App initialState={initialState} statePersister={statePersister} fs={fs} />
+        <AuthProvider>
+          <App initialState={initialState} statePersister={statePersister} fs={fs} />
+        </AuthProvider>
       </PrimeReactProvider>
     </React.StrictMode>
   );

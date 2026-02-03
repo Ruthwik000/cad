@@ -22,8 +22,18 @@ export class Model {
   }
   
   init() {
+    console.log('Model.init() called');
     if (!this.state.output && !this.state.lastCheckerRun && !this.state.previewing && !this.state.checkingSyntax && !this.state.rendering) {
+      console.log('Processing source on init');
       this.processSource();
+    } else {
+      console.log('Skipping processSource - state:', {
+        hasOutput: !!this.state.output,
+        lastCheckerRun: !!this.state.lastCheckerRun,
+        previewing: this.state.previewing,
+        checkingSyntax: this.state.checkingSyntax,
+        rendering: this.state.rendering
+      });
     }
   }
 
@@ -326,7 +336,7 @@ export class Model {
     if (this.state.params.sources.length == 1) {
       const content = this.state.params.sources[0].content;
       const contentBytes = new TextEncoder().encode(content);
-      const blob = new Blob([contentBytes], {type: 'text/plain'});
+      const blob = new Blob([contentBytes as any], {type: 'text/plain'});
       const file = new File([blob], this.state.params.activePath.split('/').pop()!);
       downloadUrl(URL.createObjectURL(file), file.name);
     } else {
@@ -346,6 +356,8 @@ export class Model {
   }
 
   async render({isPreview, mountArchives, now, retryInOtherDim}: {isPreview: boolean, mountArchives?: boolean, now: boolean, retryInOtherDim?: boolean}) {
+    console.log('Starting render, isPreview:', isPreview);
+    
     // console.log(JSON.stringify(this.state, null, 2));
     mountArchives ??= true;
     retryInOtherDim ??= true;

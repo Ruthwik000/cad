@@ -259,7 +259,7 @@ export default function ViewerPanel({className, style}: {className?: string, sty
         }}
         camera-orbit={originalOrbit}
         interaction-prompt={interactionPrompt}
-        environment-image="./skybox-lights.jpg"
+        environment-image="/skybox-lights.jpg"
         max-camera-orbit="auto 180deg auto"
         min-camera-orbit="auto 0deg auto"
         camera-controls
@@ -271,7 +271,7 @@ export default function ViewerPanel({className, style}: {className?: string, sty
       {state.view.showAxes && (
         <model-viewer
                 orientation="0deg -90deg 0deg"
-                src="./axes.glb"
+                src="/axes.glb"
                 style={{
                   position: 'absolute',
                   bottom: 0,
@@ -283,7 +283,7 @@ export default function ViewerPanel({className, style}: {className?: string, sty
                 loading="eager"
                 camera-orbit={originalOrbit}
                 // interpolation-decay="0"
-                environment-image="./skybox-lights.jpg"
+                environment-image="/skybox-lights.jpg"
                 max-camera-orbit="auto 180deg auto"
                 min-camera-orbit="auto 0deg auto"
                 orbit-sensitivity="5"

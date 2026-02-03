@@ -3,6 +3,8 @@ import { Button } from 'primereact/button';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { ModelContext } from './contexts';
+import { useAuth } from '../contexts/AuthContext';
+import { addMessageToSession, updateSession, getSession } from '../firebase/firestore';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,8 +12,9 @@ interface Message {
   image?: string; // base64 encoded image
 }
 
-export default function AIChatPanel({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export default function AIChatPanel({ visible, onClose, initialPrompt }: { visible: boolean; onClose: () => void; initialPrompt?: string | null }) {
   const model = useContext(ModelContext);
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,6 +23,8 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasProcessedInitialPrompt = useRef(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
@@ -28,7 +33,83 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
     } else {
       setShowApiKeyInput(true);
     }
+
+    // Get current session ID from localStorage
+    const sessionId = localStorage.getItem('currentSessionId');
+    if (sessionId) {
+      setCurrentSessionId(sessionId);
+      loadSessionMessages(sessionId);
+    } else {
+      // Clear messages for new chat
+      setMessages([]);
+      setCurrentSessionId(null);
+    }
+
+    // Check for initial prompt from landing page
+    const initialPrompt = localStorage.getItem('initialPrompt');
+    if (initialPrompt && savedKey) {
+      // Clear the initial prompt from storage
+      localStorage.removeItem('initialPrompt');
+      // Process it after a short delay to ensure component is ready
+      setTimeout(() => {
+        generateOpenSCAD(initialPrompt);
+      }, 500);
+    } else if (initialPrompt && !savedKey) {
+      // If no API key, set the prompt in the input field
+      setInput(initialPrompt);
+      localStorage.removeItem('initialPrompt');
+    }
   }, []);
+
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      const session = await getSession(sessionId);
+      if (session && session.messages && session.messages.length > 0) {
+        // Convert Firestore messages to local Message format
+        const loadedMessages: Message[] = session.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          image: msg.image
+        }));
+        setMessages(loadedMessages);
+        
+        // Load the model code if available
+        if (session.modelCode && model) {
+          model.setSource(session.modelCode);
+          
+          // Trigger render after code is loaded and WASM is ready
+          setTimeout(() => {
+            console.log('Auto-rendering loaded session code...');
+            model.render({ isPreview: true, now: true });
+          }, 6000); // Wait 6 seconds for WASM to be ready
+        }
+      } else {
+        // New empty session - clear messages
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error loading session messages:', error);
+      setMessages([]);
+    }
+  };
+
+  // Handle initial prompt from landing page
+  useEffect(() => {
+    if (initialPrompt && !hasProcessedInitialPrompt.current && visible) {
+      hasProcessedInitialPrompt.current = true;
+      
+      // Check if API key is available
+      if (!apiKey) {
+        // Show API key input and queue the prompt
+        setShowApiKeyInput(true);
+        setInput(initialPrompt);
+        return;
+      }
+      
+      // Automatically send the prompt
+      generateOpenSCAD(initialPrompt);
+    }
+  }, [initialPrompt, apiKey, visible]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -41,6 +122,18 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
   const saveApiKey = () => {
     localStorage.setItem('gemini_api_key', apiKey);
     setShowApiKeyInput(false);
+    
+    // If there's a queued prompt (from landing page), send it now
+    if (input.trim()) {
+      setTimeout(() => {
+        generateOpenSCAD(input.trim(), selectedImage || undefined);
+        setInput('');
+        setSelectedImage(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }, 100);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,6 +163,19 @@ export default function AIChatPanel({ visible, onClose }: { visible: boolean; on
     setLoading(true);
     const userMessage: Message = { role: 'user', content: prompt, image: imageData };
     setMessages(prev => [...prev, userMessage]);
+
+    // Save user message to Firestore if user is logged in
+    if (user && currentSessionId) {
+      try {
+        await addMessageToSession(currentSessionId, {
+          role: 'user',
+          content: prompt,
+          image: imageData
+        });
+      } catch (error) {
+        console.error('Error saving user message:', error);
+      }
+    }
 
     try {
       // Get current code from editor
@@ -182,9 +288,32 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
       const assistantMessage: Message = { role: 'assistant', content: code };
       setMessages(prev => [...prev, assistantMessage]);
 
+      // Save assistant message to Firestore if user is logged in
+      if (user && currentSessionId) {
+        try {
+          await addMessageToSession(currentSessionId, {
+            role: 'assistant',
+            content: code
+          });
+          
+          // Also update the model code in the session
+          await updateSession(currentSessionId, {
+            modelCode: code
+          });
+        } catch (error) {
+          console.error('Error saving assistant message:', error);
+        }
+      }
+
       // Insert the generated code into the editor
       if (model) {
         model.setSource(code);
+        
+        // Automatically render after code is generated
+        setTimeout(() => {
+          console.log('Auto-rendering AI generated code...');
+          model.render({ isPreview: true, now: true });
+        }, 1000);
       }
 
     } catch (error) {
@@ -194,6 +323,18 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
         content: `Error: ${error instanceof Error ? error.message : 'Failed to generate code. Please check your API key and try again.'}`
       };
       setMessages(prev => [...prev, errorMessage]);
+      
+      // Save error message to Firestore if user is logged in
+      if (user && currentSessionId) {
+        try {
+          await addMessageToSession(currentSessionId, {
+            role: 'assistant',
+            content: errorMessage.content
+          });
+        } catch (firestoreError) {
+          console.error('Error saving error message:', firestoreError);
+        }
+      }
     } finally {
       setLoading(false);
     }
