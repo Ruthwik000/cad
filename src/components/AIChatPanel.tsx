@@ -77,11 +77,25 @@ export default function AIChatPanel({ visible, onClose, initialPrompt }: { visib
         if (session.modelCode && model) {
           model.setSource(session.modelCode);
           
-          // Trigger render after code is loaded and WASM is ready
-          setTimeout(() => {
-            console.log('Auto-rendering loaded session code...');
-            model.render({ isPreview: true, now: true });
-          }, 6000); // Wait 6 seconds for WASM to be ready
+          // Trigger render after code is loaded with retry logic
+          const attemptRender = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                console.log(`Auto-rendering loaded session code (attempt ${i + 1}/${retries})...`);
+                await model.render({ isPreview: true, now: true });
+                console.log('Render successful!');
+                break;
+              } catch (error) {
+                console.error(`Render attempt ${i + 1} failed:`, error);
+                if (i < retries - 1) {
+                  // Wait longer between retries
+                  await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+                }
+              }
+            }
+          };
+          
+          setTimeout(() => attemptRender(), 2000);
         }
       } else {
         // New empty session - clear messages
@@ -309,11 +323,26 @@ Generate the OpenSCAD code now (just the code, nothing else):`;
       if (model) {
         model.setSource(code);
         
-        // Automatically render after code is generated
-        setTimeout(() => {
-          console.log('Auto-rendering AI generated code...');
-          model.render({ isPreview: true, now: true });
-        }, 1000);
+        // Automatically render after code is generated with retry logic
+        const attemptRender = async (retries = 3) => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              console.log(`Auto-rendering AI generated code (attempt ${i + 1}/${retries})...`);
+              await model.render({ isPreview: true, now: true });
+              console.log('Render successful!');
+              break;
+            } catch (error) {
+              console.error(`Render attempt ${i + 1} failed:`, error);
+              if (i < retries - 1) {
+                // Wait longer between retries
+                await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+              }
+            }
+          }
+        };
+        
+        // Wait a bit for the code to be set, then render
+        setTimeout(() => attemptRender(), 1000);
       }
 
     } catch (error) {

@@ -21,45 +21,16 @@ function EditorWorkspace({model, state, leftWidth, setLeftWidth, rightChatWidth,
   const { sessionId } = useParams();
   const [wasmReady, setWasmReady] = useState(false);
 
-  // Preload WASM and worker files
+  // Show loading indicator while WASM initializes
   useEffect(() => {
-    const preloadWasm = async () => {
-      try {
-        console.log('Starting WASM preload...');
-        
-        // Preload the WASM file
-        const wasmResponse = await fetch('/openscad.wasm');
-        if (wasmResponse.ok) {
-          console.log('WASM file preloaded');
-        }
-        
-        // Preload the worker
-        const workerResponse = await fetch('/openscad-worker.js');
-        if (workerResponse.ok) {
-          console.log('Worker file preloaded');
-        }
-        
-        // Wait longer for full initialization (WASM module needs time)
-        setTimeout(() => {
-          setWasmReady(true);
-          console.log('WASM ready for rendering - triggering automatic render');
-          
-          // Automatically render after WASM is ready
-          setTimeout(() => {
-            if (model && model.source && model.source.trim()) {
-              console.log('Auto-rendering model...');
-              model.render({ isPreview: true, now: true });
-            }
-          }, 500);
-        }, 5000); // Increased to 5 seconds
-      } catch (error) {
-        console.error('Error preloading WASM:', error);
-        // Still set to true after delay even if preload fails
-        setTimeout(() => setWasmReady(true), 5000);
-      }
-    };
+    // Show loading for 3 seconds, then hide
+    // The actual WASM initialization happens on first render
+    const timer = setTimeout(() => {
+      setWasmReady(true);
+      console.log('WASM initialization period complete');
+    }, 3000);
     
-    preloadWasm();
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
